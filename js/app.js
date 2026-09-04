@@ -101,6 +101,8 @@
      --------------------------------------------------------- */
   const root = document.documentElement;
 
+  const appHeader = document.getElementById("appHeader");
+  const appFooter = document.getElementById("appFooter");
   const listView = document.getElementById("listView");
   const detailView = document.getElementById("detailView");
 
@@ -133,6 +135,9 @@
   const toastAction = document.getElementById("toastAction");
 
   const backBtn = document.getElementById("backBtn");
+  const entryNumber = document.getElementById("entryNumber");
+  const detailPageLeft = document.getElementById("detailPageLeft");
+  const detailSettingsBtn = document.getElementById("detailSettingsBtn");
   const detailCheck = document.getElementById("detailCheck");
   const detailTitle = document.getElementById("detailTitle");
   const detailFavorite = document.getElementById("detailFavorite");
@@ -148,6 +153,7 @@
   const subtaskList = document.getElementById("subtaskList");
   const subtaskForm = document.getElementById("subtaskForm");
   const subtaskInput = document.getElementById("subtaskInput");
+  const logScroll = document.getElementById("logScroll");
   const commentList = document.getElementById("commentList");
   const commentForm = document.getElementById("commentForm");
   const commentInput = document.getElementById("commentInput");
@@ -246,12 +252,16 @@
     const route = parseRoute();
     if (route.view === "detail" && findTodo(route.id)) {
       currentDetailId = route.id;
+      appHeader.hidden = true;
+      appFooter.hidden = true;
       listView.hidden = true;
       detailView.hidden = false;
       renderDetail();
     } else {
       currentDetailId = null;
       detailView.hidden = true;
+      appHeader.hidden = false;
+      appFooter.hidden = false;
       listView.hidden = false;
       document.title = "OwnDo — your local, private todo list";
       render();
@@ -300,21 +310,25 @@
   /* ---------------------------------------------------------
      Settings panel open/close
      --------------------------------------------------------- */
-  function openSettings() {
+  let settingsTrigger = settingsBtn;
+
+  function openSettings(trigger) {
+    settingsTrigger = trigger || settingsBtn;
     settingsPanel.hidden = false;
     overlay.hidden = false;
-    settingsBtn.setAttribute("aria-expanded", "true");
+    settingsTrigger.setAttribute("aria-expanded", "true");
     closeSettings.focus();
   }
 
   function closeSettingsPanel() {
     settingsPanel.hidden = true;
     overlay.hidden = true;
-    settingsBtn.setAttribute("aria-expanded", "false");
-    settingsBtn.focus();
+    settingsTrigger.setAttribute("aria-expanded", "false");
+    settingsTrigger.focus();
   }
 
-  settingsBtn.addEventListener("click", openSettings);
+  settingsBtn.addEventListener("click", () => openSettings(settingsBtn));
+  detailSettingsBtn.addEventListener("click", () => openSettings(detailSettingsBtn));
   closeSettings.addEventListener("click", closeSettingsPanel);
   overlay.addEventListener("click", closeSettingsPanel);
   document.addEventListener("keydown", (e) => {
@@ -673,7 +687,11 @@
 
     document.title = `${todo.text} — OwnDo`;
 
-    detailView.querySelector(".detail-top").classList.toggle("is-done", todo.completed);
+    const ordered = [...todos].sort((a, b) => a.createdAt - b.createdAt);
+    const position = ordered.findIndex((t) => t.id === todo.id) + 1;
+    entryNumber.textContent = `No. ${String(position).padStart(3, "0")}`;
+
+    detailPageLeft.classList.toggle("is-done", todo.completed);
     detailCheck.setAttribute("aria-label", todo.completed ? "Mark as not done" : "Mark as done");
     detailCheck.innerHTML = '<svg width="12" height="10" viewBox="0 0 12 10" aria-hidden="true"><path d="M1 5l3.5 3.5L11 1.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
@@ -766,7 +784,7 @@
       commentList.innerHTML = "";
       return;
     }
-    const sorted = [...todo.comments].sort((a, b) => b.createdAt - a.createdAt);
+    const sorted = [...todo.comments].sort((a, b) => a.createdAt - b.createdAt);
     commentList.innerHTML = sorted
       .map(
         (c) => `
@@ -913,6 +931,7 @@
     saveTodos(todos);
     commentInput.value = "";
     renderCommentList(todo);
+    logScroll.scrollTo({ top: logScroll.scrollHeight, behavior: "smooth" });
   });
   commentInput.addEventListener("keydown", (e) => {
     if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
