@@ -19,8 +19,8 @@
   --border-strong: #C4BEAE;
   --danger: #A4443A;
   --danger-ink: #ffffff;
-  --warning: #A97A2E;
-  --priority-low: #6E8F6B;
+  --warning: #8A611F;
+  --priority-low: #5E7D5B;
 
   /* Accent — overridden per data-accent */
   --accent: #3C6E58;
@@ -58,6 +58,7 @@
     --border: #38362F;
     --border-strong: #46433A;
     --shadow-panel: 0 12px 32px rgba(0, 0, 0, 0.45);
+    --danger: #C77367;
     --warning: #D9A64E;
     --priority-low: #8FB08A;
   }
@@ -78,6 +79,7 @@
   --border: #38362F;
   --border-strong: #46433A;
   --shadow-panel: 0 12px 32px rgba(0, 0, 0, 0.45);
+  --danger: #C77367;
   --warning: #D9A64E;
   --priority-low: #8FB08A;
 }
@@ -354,7 +356,7 @@ input { font-family: inherit; }
 .search-icon {
   position: absolute;
   left: 10px;
-  color: var(--ink-faint);
+  color: var(--ink-muted);
   pointer-events: none;
 }
 .search-wrap input {
@@ -469,7 +471,7 @@ input { font-family: inherit; }
 .drag-handle {
   border: none;
   background: none;
-  color: var(--ink-faint);
+  color: var(--ink-muted);
   cursor: grab;
   padding: 6px 2px;
   line-height: 1;
@@ -484,7 +486,7 @@ input { font-family: inherit; }
   height: 22px;
   margin-top: 2px;
   border-radius: 50%;
-  border: 1.6px solid var(--border-strong);
+  border: 1.6px solid var(--ink-muted);
   background: var(--surface);
   cursor: pointer;
   display: inline-flex;
@@ -534,7 +536,7 @@ input { font-family: inherit; }
   height: 30px;
   border: none;
   background: none;
-  color: var(--ink-faint);
+  color: var(--ink-muted);
   cursor: pointer;
   border-radius: var(--radius-sm);
   display: inline-flex;
@@ -552,7 +554,7 @@ input { font-family: inherit; }
   height: 30px;
   border: none;
   background: none;
-  color: var(--border-strong);
+  color: var(--ink-muted);
   cursor: pointer;
   border-radius: var(--radius-sm);
   display: inline-flex;
@@ -947,7 +949,7 @@ input { font-family: inherit; }
 .chip button {
   border: none;
   background: none;
-  color: var(--ink-faint);
+  color: var(--ink-muted);
   cursor: pointer;
   display: inline-flex;
   padding: 2px;
@@ -988,7 +990,7 @@ input { font-family: inherit; }
 .subtask-item .delete-btn {
   border: none;
   background: none;
-  color: var(--ink-faint);
+  color: var(--ink-muted);
   cursor: pointer;
   opacity: 0;
   padding: 4px;
@@ -1045,7 +1047,7 @@ input { font-family: inherit; }
 .comment-delete {
   border: none;
   background: none;
-  color: var(--ink-faint);
+  color: var(--ink-muted);
   font-size: 0.76rem;
   cursor: pointer;
   padding: 0;
