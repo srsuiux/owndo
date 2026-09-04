@@ -8,10 +8,13 @@ OwnDo is a small todo app with no account, no server, and no sync. It runs entir
 
 ## Features
 
-- Create, edit, complete, and delete tasks
-- Reorder tasks by dragging
-- Filter by all / active / completed, and search by text
-- Clear completed tasks in one click
+- Create, edit, complete, and delete tasks, with a dedicated detail page for each one
+- Set priority (none/low/medium/high), due dates, and repeat rules (daily/weekly/monthly)
+- Add notes, subtasks (a checklist within a task), tags, and comments to any task
+- Mark tasks as favorites, and filter the list by favorite or by tag
+- Reorder tasks by dragging (manual order), or sort by priority, due date, date added, or A–Z
+- Filter by all / active / completed, and search across titles, notes, and tags
+- Clear completed tasks in one click, with an undo toast for accidental deletes
 - Export your tasks to a JSON file and import them back — your own backup, on your terms
 - Customize appearance: light/dark/system theme, accent color, density, corner style, and list font
 - Zero network requests — works fully offline, no fonts or scripts loaded from a CDN
