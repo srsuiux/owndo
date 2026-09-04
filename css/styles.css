@@ -135,21 +135,44 @@ input { font-family: inherit; }
 }
 
 /* ---------------------------------------------------------
-   Layout
+   Layout — a full-height shell: sticky header, board fills
+   the middle, a slim footer. Nothing here scrolls except the
+   board itself, so the header never needs to re-anchor.
    --------------------------------------------------------- */
 .app {
-  max-width: 640px;
-  margin: 0 auto;
-  padding: clamp(28px, 6vw, 56px) 20px 40px;
+  height: 100vh;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .app-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--gap);
-  margin-bottom: calc(var(--gap) * 1.6);
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
 }
+
+.header-row {
+  display: flex;
+  align-items: center;
+  gap: var(--gap);
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 14px clamp(16px, 3vw, 32px) 0;
+}
+.header-row:last-of-type,
+.header-row.toolbar { padding-bottom: 14px; }
+.header-row-brand { justify-content: space-between; align-items: flex-start; padding-top: clamp(16px, 3vw, 28px); }
+
+#addOptions,
+#tagFilterBar {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding-left: clamp(16px, 3vw, 32px);
+  padding-right: clamp(16px, 3vw, 32px);
+}
+#tagFilterBar { padding-bottom: 14px; }
 
 .brand {
   display: block;
@@ -271,18 +294,8 @@ input { font-family: inherit; }
 
 /* Toolbar */
 .toolbar {
-  display: flex;
-  align-items: center;
   justify-content: space-between;
-  gap: 12px;
   flex-wrap: wrap;
-  margin-bottom: 14px;
-}
-
-.toolbar-right {
-  display: flex;
-  align-items: center;
-  gap: 10px;
 }
 
 .sort-select {
@@ -324,30 +337,6 @@ input { font-family: inherit; }
   color: var(--accent-ink);
 }
 
-.filters {
-  display: flex;
-  gap: 4px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 3px;
-}
-.filter-btn {
-  border: none;
-  background: transparent;
-  color: var(--ink-muted);
-  padding: 6px 14px;
-  border-radius: calc(var(--radius) - 3px);
-  font-size: 0.86rem;
-  cursor: pointer;
-  transition: background-color var(--dur) var(--ease), color var(--dur) var(--ease);
-}
-.filter-btn:hover { color: var(--ink); }
-.filter-btn.is-active {
-  background: var(--accent);
-  color: var(--accent-ink);
-}
-
 .search-wrap {
   position: relative;
   display: flex;
@@ -375,18 +364,6 @@ input { font-family: inherit; }
 }
 .search-wrap input::placeholder { color: var(--ink-faint); }
 
-/* List meta */
-.list-meta {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 2px 10px;
-  border-bottom: 1px solid var(--border);
-  margin-bottom: 4px;
-  font-size: 0.86rem;
-  color: var(--ink-muted);
-}
-
 .text-btn {
   background: none;
   border: none;
@@ -412,42 +389,192 @@ input { font-family: inherit; }
 }
 
 /* ---------------------------------------------------------
-   Todo list
+   Kanban board — the middle of the shell. The board scrolls
+   horizontally if it must; each column scrolls its own cards.
    --------------------------------------------------------- */
-.todo-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.todo-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  padding: var(--pad) 2px var(--pad) 10px;
-  border-bottom: 1px solid var(--border);
-  border-left: 3px solid transparent;
-  transition: opacity var(--dur) var(--ease), background-color var(--dur) var(--ease);
-}
-.todo-item[data-priority="high"] { border-left-color: var(--danger); }
-.todo-item[data-priority="medium"] { border-left-color: var(--warning); }
-.todo-item[data-priority="low"] { border-left-color: var(--priority-low); }
-.todo-item.is-dragging { opacity: 0.4; }
-.todo-item.drag-over-top { box-shadow: inset 0 2px 0 var(--accent); }
-.todo-item.drag-over-bottom { box-shadow: inset 0 -2px 0 var(--accent); }
-
-.todo-body {
+.board-shell {
   flex: 1;
-  min-width: 0;
-  cursor: pointer;
+  min-height: 0;
+  overflow: hidden;
 }
 
-.todo-meta-row {
+.kanban-board {
+  height: 100%;
+  display: flex;
+  gap: 18px;
+  overflow-x: auto;
+  padding: 20px clamp(16px, 3vw, 32px);
+}
+
+.kanban-column {
+  flex: 1 1 300px;
+  min-width: 270px;
+  max-width: 380px;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  transition: border-color var(--dur) var(--ease), background-color var(--dur) var(--ease);
+}
+.kanban-column.is-drag-over {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 6%, var(--surface));
+}
+
+.column-header {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
+  gap: 8px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.column-title {
+  font-size: 0.92rem;
+  font-weight: 600;
+  margin: 0;
+  color: var(--ink);
+}
+.column-count {
+  font-size: 0.78rem;
+  color: var(--ink-muted);
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 1px 9px;
+}
+.column-clear {
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: var(--ink-muted);
+  font-size: 0.8rem;
+  cursor: pointer;
+  padding: 2px;
+  transition: color var(--dur) var(--ease);
+}
+.column-clear:hover { color: var(--danger); }
+.column-clear:disabled { opacity: 0.4; cursor: default; }
+.column-clear:disabled:hover { color: var(--ink-muted); }
+
+.column-list {
+  flex: 1;
+  min-height: 60px;
+  overflow-y: auto;
+  list-style: none;
+  margin: 0;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
   gap: 10px;
+}
+
+.column-empty {
+  text-align: center;
+  color: var(--ink-faint);
+  font-size: 0.84rem;
+  font-style: italic;
+  padding: 18px 10px;
+}
+
+.column-composer {
+  flex-shrink: 0;
+  padding: 10px 12px 12px;
+  border-top: 1px solid var(--border);
+}
+.column-composer input {
+  width: 100%;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--ink-muted);
+  padding: 8px 10px;
+  font-size: 0.86rem;
+  transition: border-color var(--dur) var(--ease), color var(--dur) var(--ease), background-color var(--dur) var(--ease);
+}
+.column-composer input::placeholder { color: var(--ink-faint); }
+.column-composer input:focus-visible {
+  border-style: solid;
+  border-color: var(--accent);
+  color: var(--ink);
+  background: var(--surface-raised);
+}
+
+/* Cards */
+.kanban-card {
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-left: 3px solid transparent;
+  border-radius: var(--radius-sm);
+  padding: 12px 12px 10px;
+  cursor: pointer;
+  transition: opacity var(--dur) var(--ease), border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
+}
+.kanban-card:hover { border-color: var(--border-strong); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06); }
+.kanban-card[data-priority="high"] { border-left-color: var(--danger); }
+.kanban-card[data-priority="medium"] { border-left-color: var(--warning); }
+.kanban-card[data-priority="low"] { border-left-color: var(--priority-low); }
+.kanban-card.is-dragging { opacity: 0.4; }
+.kanban-card.drag-over-top { box-shadow: inset 0 2px 0 var(--accent); }
+.kanban-card.drag-over-bottom { box-shadow: inset 0 -2px 0 var(--accent); }
+
+.card-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.card-title {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-body, var(--font-ui));
+  color: var(--ink);
+  word-break: break-word;
+  line-height: 1.35;
+}
+:root[data-font="serif"] .card-title {
+  --font-body: var(--font-serif-list);
+}
+
+.card-actions {
+  display: flex;
+  gap: 2px;
+  flex-shrink: 0;
+}
+.card-actions button {
+  width: 26px;
+  height: 26px;
+  border: none;
+  background: none;
+  color: var(--ink-muted);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: color var(--dur) var(--ease), opacity var(--dur) var(--ease), background-color var(--dur) var(--ease);
+}
+.kanban-card:hover .card-actions button,
+.kanban-card:focus-within .card-actions button,
+.card-actions .favorite-btn.is-active {
+  opacity: 1;
+}
+.card-actions .favorite-btn:hover,
+.card-actions .favorite-btn.is-active { color: var(--warning); }
+.card-actions .favorite-btn.is-active svg { fill: currentColor; }
+.card-actions .delete-btn:hover { color: var(--danger); background: var(--surface); }
+@media (hover: none) {
+  .card-actions button { opacity: 1; }
+}
+
+.card-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   flex-wrap: wrap;
-  margin-top: 4px;
+  margin-top: 8px;
 }
 .meta-badge {
   display: inline-flex;
@@ -468,137 +595,16 @@ input { font-family: inherit; }
   color: var(--ink-muted);
 }
 
-.drag-handle {
-  border: none;
-  background: none;
-  color: var(--ink-muted);
-  cursor: grab;
-  padding: 6px 2px;
-  line-height: 1;
-  flex-shrink: 0;
-  touch-action: none;
-}
-.drag-handle:active { cursor: grabbing; }
-
-.check-btn {
-  flex-shrink: 0;
-  width: 22px;
-  height: 22px;
-  margin-top: 2px;
-  border-radius: 50%;
-  border: 1.6px solid var(--ink-muted);
-  background: var(--surface);
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--accent-ink);
-  transition: background-color var(--dur) var(--ease), border-color var(--dur) var(--ease), transform var(--dur) var(--ease);
-}
-.check-btn svg { opacity: 0; transform: scale(0.5); transition: opacity var(--dur) var(--ease), transform var(--dur) var(--ease); }
-.check-btn:hover { border-color: var(--accent); }
-.todo-item.is-done .check-btn {
-  background: var(--accent);
-  border-color: var(--accent);
-}
-.todo-item.is-done .check-btn svg { opacity: 1; transform: scale(1); }
-
-.todo-text {
-  flex: 1;
-  min-width: 0;
-  padding: 2px 0;
-  font-family: var(--font-body, var(--font-ui));
-  color: var(--ink);
-  word-break: break-word;
-}
-:root[data-font="serif"] .todo-text {
-  --font-body: var(--font-serif-list);
-}
-.todo-item.is-done .todo-text {
-  color: var(--ink-faint);
-  text-decoration: line-through;
-  text-decoration-color: var(--ink-faint);
-}
-
-.item-actions {
-  display: flex;
-  gap: 2px;
-  flex-shrink: 0;
-  opacity: 0;
-  transition: opacity var(--dur) var(--ease);
-}
-.todo-item:hover .item-actions,
-.todo-item:focus-within .item-actions {
-  opacity: 1;
-}
-.item-actions button {
-  width: 30px;
-  height: 30px;
-  border: none;
-  background: none;
-  color: var(--ink-muted);
-  cursor: pointer;
-  border-radius: var(--radius-sm);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  transition: color var(--dur) var(--ease), background-color var(--dur) var(--ease);
-}
-.item-actions .delete-btn:hover { color: var(--danger); background: var(--surface); }
-.item-actions .open-btn:hover { color: var(--accent); background: var(--surface); }
-
-/* Favorite star sits outside .item-actions so it stays visible when set */
-.favorite-btn {
-  flex-shrink: 0;
-  width: 30px;
-  height: 30px;
-  border: none;
-  background: none;
-  color: var(--ink-muted);
-  cursor: pointer;
-  border-radius: var(--radius-sm);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0;
-  transition: color var(--dur) var(--ease), opacity var(--dur) var(--ease);
-}
-.todo-item:hover .favorite-btn,
-.todo-item:focus-within .favorite-btn,
-.favorite-btn.is-active {
-  opacity: 1;
-}
-.favorite-btn:hover { color: var(--warning); }
-.favorite-btn.is-active { color: var(--warning); }
-.favorite-btn.is-active svg { fill: currentColor; }
-@media (hover: none) {
-  .favorite-btn { opacity: 1; }
-}
-
-@media (hover: none) {
-  .item-actions { opacity: 1; }
-}
-
-/* Empty state */
-.empty-state {
-  text-align: center;
-  padding: 56px 20px;
-  color: var(--ink-muted);
-}
-.empty-title {
-  font-family: var(--font-display);
-  font-size: 1.2rem;
-  margin: 0 0 6px;
-  color: var(--ink);
-}
-.empty-sub { margin: 0; font-size: 0.9rem; }
-
 .app-footer {
-  margin-top: 32px;
+  flex-shrink: 0;
+  padding: 8px 16px;
   text-align: center;
+  border-top: 1px solid var(--border);
+  background: var(--bg);
 }
 .app-footer p {
-  font-size: 0.8rem;
+  margin: 0;
+  font-size: 0.74rem;
   color: var(--ink-faint);
   font-style: italic;
 }
@@ -850,9 +856,6 @@ input { font-family: inherit; }
   align-items: center;
   gap: 12px;
 }
-.record-head .check-btn { margin-top: 0; }
-.detail-page-left.is-done .check-btn { background: var(--accent); border-color: var(--accent); }
-.detail-page-left.is-done .check-btn svg { opacity: 1; transform: scale(1); }
 
 .detail-page-left.is-done::before {
   content: "Done";
@@ -961,7 +964,23 @@ input { font-family: inherit; }
   gap: 8px;
 }
 
-/* Subtasks */
+/* Subtasks — the only remaining checkbox in the app; the
+   main task's state is now a Status control, not a checkbox. */
+.check-btn {
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: 1.6px solid var(--ink-muted);
+  background: var(--surface);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent-ink);
+  transition: background-color var(--dur) var(--ease), border-color var(--dur) var(--ease), transform var(--dur) var(--ease);
+}
+.check-btn svg { opacity: 0; transform: scale(0.5); transition: opacity var(--dur) var(--ease), transform var(--dur) var(--ease); }
+.check-btn:hover { border-color: var(--accent); }
+
 .subtask-list {
   list-style: none;
   margin: 0 0 10px;
@@ -1081,16 +1100,21 @@ input { font-family: inherit; }
   .log-heading { margin-top: 4px; }
 }
 
+@media (max-width: 700px) {
+  /* One column mostly fills the screen with a peek of the next —
+     the board stays a board, just swipeable instead of side-by-side. */
+  .kanban-column { flex: 0 0 84vw; min-width: 0; max-width: 380px; scroll-snap-align: start; }
+  .kanban-board { scroll-snap-type: x proximity; }
+}
+
 @media (max-width: 480px) {
   .entry-number { display: none; }
   .detail-title-input { font-size: 1.4rem; }
   .detail-page-left.is-done::before { font-size: 1rem; top: 18px; padding: 3px 10px; }
-  .app-header { align-items: center; }
+  .header-row-brand { align-items: center; }
   .brand-mark { font-size: 1.6rem; }
   .toolbar { flex-direction: column; align-items: stretch; }
-  .toolbar-right { flex-direction: column; align-items: stretch; }
   .search-wrap input, .search-wrap input:focus-visible { width: 100%; }
-  .filters { justify-content: space-between; }
   .detail-grid { grid-template-columns: 1fr; }
   .add-options-row { flex-direction: column; align-items: flex-start; gap: 6px; }
 }

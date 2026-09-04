@@ -16,6 +16,7 @@
   const PRIORITIES = ["none", "low", "medium", "high"];
   const PRIORITY_RANK = { high: 3, medium: 2, low: 1, none: 0 };
   const REPEATS = ["none", "daily", "weekly", "monthly"];
+  const STATUSES = ["todo", "doing", "done"];
 
   /* ---------------------------------------------------------
      Storage helpers — everything lives in localStorage only.
@@ -29,10 +30,11 @@
     const text = typeof t.text === "string" ? t.text.trim() : "";
     if (!text) return null;
     const createdAt = typeof t.createdAt === "number" ? t.createdAt : Date.now();
+    const status = STATUSES.includes(t.status) ? t.status : t.completed ? "done" : "todo";
     return {
       id: typeof t.id === "string" && t.id ? t.id : uid(),
       text,
-      completed: Boolean(t.completed),
+      status,
       notes: typeof t.notes === "string" ? t.notes : "",
       priority: PRIORITIES.includes(t.priority) ? t.priority : "none",
       dueDate: typeof t.dueDate === "string" && t.dueDate ? t.dueDate : null,
@@ -87,7 +89,6 @@
      --------------------------------------------------------- */
   let todos = loadTodos();
   let settings = loadSettings();
-  let filter = "all";
   let query = "";
   let tagFilter = null;
   let favoritesOnly = false;
@@ -113,14 +114,10 @@
   const addDue = document.getElementById("addDue");
   const addTags = document.getElementById("addTags");
 
-  const todoList = document.getElementById("todoList");
-  const emptyState = document.getElementById("emptyState");
-  const countLabel = document.getElementById("countLabel");
-  const clearCompletedBtn = document.getElementById("clearCompletedBtn");
   const searchInput = document.getElementById("searchInput");
-  const filterButtons = document.querySelectorAll(".filter-btn");
   const sortSelect = document.getElementById("sortSelect");
   const tagFilterBar = document.getElementById("tagFilterBar");
+  const clearDoneBtn = document.getElementById("clearDoneBtn");
 
   const settingsBtn = document.getElementById("settingsBtn");
   const closeSettings = document.getElementById("closeSettings");
@@ -138,10 +135,10 @@
   const entryNumber = document.getElementById("entryNumber");
   const detailPageLeft = document.getElementById("detailPageLeft");
   const detailSettingsBtn = document.getElementById("detailSettingsBtn");
-  const detailCheck = document.getElementById("detailCheck");
   const detailTitle = document.getElementById("detailTitle");
   const detailFavorite = document.getElementById("detailFavorite");
   const detailDelete = document.getElementById("detailDelete");
+  const statusRow = document.getElementById("statusRow");
   const priorityRow = document.getElementById("priorityRow");
   const detailDue = document.getElementById("detailDue");
   const detailRepeat = document.getElementById("detailRepeat");
@@ -158,6 +155,17 @@
   const commentForm = document.getElementById("commentForm");
   const commentInput = document.getElementById("commentInput");
   const detailMeta = document.getElementById("detailMeta");
+
+  const columns = {};
+  STATUSES.forEach((status) => {
+    columns[status] = {
+      root: document.querySelector(`.kanban-column[data-status="${status}"]`),
+      list: document.querySelector(`.column-list[data-list="${status}"]`),
+      count: document.querySelector(`.column-count[data-count="${status}"]`),
+      composerForm: document.querySelector(`.column-composer[data-composer="${status}"]`),
+      composerInput: document.querySelector(`.column-composer[data-composer="${status}"] input`),
+    };
+  });
 
   /* ---------------------------------------------------------
      Small shared helpers
@@ -213,6 +221,30 @@
     todo.updatedAt = Date.now();
   }
 
+  /* Sets a task's workflow status, spawning the next occurrence
+     of a repeating task the moment it lands in Done. */
+  function setStatus(todo, newStatus) {
+    const wasDone = todo.status === "done";
+    todo.status = newStatus;
+    touch(todo);
+    if (!wasDone && newStatus === "done" && todo.repeat !== "none" && todo.dueDate) {
+      const nextDue = computeNextDue(todo.dueDate, todo.repeat);
+      if (nextDue) {
+        const clone = {
+          ...todo,
+          id: uid(),
+          status: "todo",
+          dueDate: nextDue,
+          comments: [],
+          subtasks: todo.subtasks.map((s) => ({ ...s, completed: false })),
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        };
+        todos.unshift(clone);
+      }
+    }
+  }
+
   /* ---------------------------------------------------------
      Toast (with optional undo action)
      --------------------------------------------------------- */
@@ -237,7 +269,7 @@
   }
 
   /* ---------------------------------------------------------
-     Routing — #/ for the list, #/todo/<id> for the detail page
+     Routing — #/ for the board, #/todo/<id> for the detail page
      --------------------------------------------------------- */
   function parseRoute() {
     const match = location.hash.match(/^#\/todo\/(.+)$/);
@@ -353,11 +385,9 @@
   setActiveButton(addOptions.querySelector('[data-pending="priority"]'), pendingPriority);
 
   /* ---------------------------------------------------------
-     List filtering & sorting
+     Filtering & sorting (status is a column now, not a filter)
      --------------------------------------------------------- */
   function matchesFilter(todo) {
-    if (filter === "active" && todo.completed) return false;
-    if (filter === "completed" && !todo.completed) return false;
     if (favoritesOnly && !todo.favorite) return false;
     if (tagFilter && !todo.tags.includes(tagFilter)) return false;
     if (query) {
@@ -389,37 +419,38 @@
   }
 
   /* ---------------------------------------------------------
-     List rendering
+     Board rendering
      --------------------------------------------------------- */
   const ICONS = {
     calendar: '<svg width="12" height="12" viewBox="0 0 20 20" aria-hidden="true"><rect x="3" y="4" width="14" height="13" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.4"/><line x1="3" y1="8" x2="17" y2="8" stroke="currentColor" stroke-width="1.4"/><line x1="6.5" y1="2.5" x2="6.5" y2="5.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><line x1="13.5" y1="2.5" x2="13.5" y2="5.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>',
     checklist: '<svg width="12" height="12" viewBox="0 0 20 20" aria-hidden="true"><path d="M3 5.5l1.5 1.5L7 4M3 11.5 4.5 13 7 10M9 6h8M9 12h8" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>',
     comment: '<svg width="12" height="12" viewBox="0 0 20 20" aria-hidden="true"><path d="M3 4.5h14v9H8l-4 3.5v-3.5H3v-9Z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>',
     star: '<svg width="16" height="16" viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2.5l2.35 4.76 5.25.76-3.8 3.7.9 5.23L10 14.5l-4.7 2.45.9-5.23-3.8-3.7 5.25-.76L10 2.5Z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>',
+    trash: '<svg width="15" height="15" viewBox="0 0 20 20" aria-hidden="true"><path d="M4 6h12M8 6V4h4v2m-7 0 1 11h6l1-11" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  };
+
+  const EMPTY_TEXT = {
+    todo: "Nothing here yet. Add your first task above.",
+    doing: "Nothing in progress.",
+    done: "Nothing done yet.",
   };
 
   function render() {
-    let visible = todos.filter(matchesFilter);
-    if (settings.sortBy !== "manual") visible = sortTodos(visible);
+    STATUSES.forEach((status) => {
+      const col = columns[status];
+      let items = todos.filter((t) => t.status === status && matchesFilter(t));
+      if (settings.sortBy !== "manual") items = sortTodos(items);
 
-    todoList.innerHTML = "";
-    visible.forEach((todo) => todoList.appendChild(renderItem(todo)));
+      col.list.innerHTML = "";
+      if (items.length === 0) {
+        col.list.innerHTML = `<li class="column-empty">${query || tagFilter || favoritesOnly ? "No cards match." : EMPTY_TEXT[status]}</li>`;
+      } else {
+        items.forEach((todo) => col.list.appendChild(renderCard(todo, status)));
+      }
+      col.count.textContent = String(todos.filter((t) => t.status === status).length);
+    });
 
-    const total = todos.length;
-    const done = todos.filter((t) => t.completed).length;
-    countLabel.textContent = total === 0 ? "0 tasks" : `${total} task${total === 1 ? "" : "s"}, ${done} completed`;
-    clearCompletedBtn.disabled = done === 0;
-
-    const noneAtAll = total === 0;
-    const noneVisible = visible.length === 0 && !noneAtAll;
-    emptyState.hidden = !noneAtAll;
-    todoList.hidden = noneAtAll;
-
-    if (noneVisible) {
-      todoList.hidden = false;
-      todoList.innerHTML = `<li class="empty-state"><p class="empty-sub">No tasks match${query ? ` “${escapeHtml(query)}”` : " this filter"}.</p></li>`;
-    }
-
+    clearDoneBtn.disabled = todos.filter((t) => t.status === "done").length === 0;
     renderTagFilterBar();
   }
 
@@ -454,16 +485,15 @@
     });
   }
 
-  function renderItem(todo) {
+  function renderCard(todo) {
     const li = document.createElement("li");
-    li.className = "todo-item" + (todo.completed ? " is-done" : "");
+    li.className = "kanban-card";
     li.dataset.id = todo.id;
     li.dataset.priority = todo.priority;
+    li.draggable = true;
+    li.tabIndex = 0;
 
-    const manualSort = settings.sortBy === "manual";
-    li.draggable = manualSort;
-
-    const overdue = todo.dueDate && !todo.completed && todo.dueDate < todayStr();
+    const overdue = todo.dueDate && todo.status !== "done" && todo.dueDate < todayStr();
     const dueToday = todo.dueDate && todo.dueDate === todayStr();
     const subtaskDone = todo.subtasks.filter((s) => s.completed).length;
 
@@ -483,74 +513,39 @@
     });
 
     li.innerHTML = `
-      <button class="drag-handle" aria-label="Drag to reorder" type="button" ${manualSort ? "" : "hidden"}>
-        <svg width="12" height="16" viewBox="0 0 12 16" aria-hidden="true">
-          <circle cx="3" cy="3" r="1.4" fill="currentColor"/><circle cx="9" cy="3" r="1.4" fill="currentColor"/>
-          <circle cx="3" cy="8" r="1.4" fill="currentColor"/><circle cx="9" cy="8" r="1.4" fill="currentColor"/>
-          <circle cx="3" cy="13" r="1.4" fill="currentColor"/><circle cx="9" cy="13" r="1.4" fill="currentColor"/>
-        </svg>
-      </button>
-      <button class="check-btn" type="button" aria-label="${todo.completed ? "Mark as not done" : "Mark as done"}">
-        <svg width="12" height="10" viewBox="0 0 12 10" aria-hidden="true"><path d="M1 5l3.5 3.5L11 1.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      </button>
-      <div class="todo-body">
-        <span class="todo-text">${escapeHtml(todo.text)}</span>
-        ${metaHtml ? `<div class="todo-meta-row">${metaHtml}</div>` : ""}
+      <div class="card-top">
+        <span class="card-title">${escapeHtml(todo.text)}</span>
+        <div class="card-actions">
+          <button class="favorite-btn${todo.favorite ? " is-active" : ""}" type="button" aria-label="${todo.favorite ? "Remove from favorites" : "Add to favorites"}">${ICONS.star}</button>
+          <button class="delete-btn" type="button" aria-label="Delete task">${ICONS.trash}</button>
+        </div>
       </div>
-      <button class="favorite-btn${todo.favorite ? " is-active" : ""}" type="button" aria-label="${todo.favorite ? "Remove from favorites" : "Add to favorites"}">${ICONS.star}</button>
-      <div class="item-actions">
-        <button class="open-btn" type="button" aria-label="Open task details">
-          <svg width="14" height="14" viewBox="0 0 20 20" aria-hidden="true"><path d="M7 4l6 6-6 6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        </button>
-        <button class="delete-btn" type="button" aria-label="Delete task">
-          <svg width="15" height="15" viewBox="0 0 20 20" aria-hidden="true"><path d="M4 6h12M8 6V4h4v2m-7 0 1 11h6l1-11" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        </button>
-      </div>
+      ${metaHtml ? `<div class="card-meta">${metaHtml}</div>` : ""}
     `;
 
-    li.querySelector(".check-btn").addEventListener("click", () => { toggleComplete(todo.id); render(); });
+    const open = () => goTo(`#/todo/${encodeURIComponent(todo.id)}`);
+    li.addEventListener("click", (e) => {
+      if (e.target.closest(".card-actions")) return;
+      open();
+    });
+    li.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.target.closest(".card-actions")) open();
+    });
     li.querySelector(".favorite-btn").addEventListener("click", () => { toggleFavorite(todo.id); render(); });
-    li.querySelector(".open-btn").addEventListener("click", () => goTo(`#/todo/${encodeURIComponent(todo.id)}`));
-    li.querySelector(".todo-body").addEventListener("click", () => goTo(`#/todo/${encodeURIComponent(todo.id)}`));
     li.querySelector(".delete-btn").addEventListener("click", (e) => {
       e.stopPropagation();
-      const index = todos.findIndex((t) => t.id === todo.id);
-      todos = todos.filter((t) => t.id !== todo.id);
-      saveTodos(todos);
-      render();
-      showToast("Task deleted", "Undo", () => {
-        todos.splice(index, 0, todo);
-        saveTodos(todos);
-        render();
-      });
+      deleteWithUndo(todo.id);
     });
 
-    if (manualSort) {
-      li.addEventListener("dragstart", (e) => {
-        dragId = todo.id;
-        li.classList.add("is-dragging");
-        e.dataTransfer.effectAllowed = "move";
-      });
-      li.addEventListener("dragend", () => {
-        li.classList.remove("is-dragging");
-        clearDragIndicators();
-      });
-      li.addEventListener("dragover", (e) => {
-        e.preventDefault();
-        const rect = li.getBoundingClientRect();
-        const before = e.clientY - rect.top < rect.height / 2;
-        clearDragIndicators();
-        li.classList.add(before ? "drag-over-top" : "drag-over-bottom");
-      });
-      li.addEventListener("dragleave", () => li.classList.remove("drag-over-top", "drag-over-bottom"));
-      li.addEventListener("drop", (e) => {
-        e.preventDefault();
-        const rect = li.getBoundingClientRect();
-        const before = e.clientY - rect.top < rect.height / 2;
-        reorder(dragId, todo.id, before);
-        clearDragIndicators();
-      });
-    }
+    li.addEventListener("dragstart", (e) => {
+      dragId = todo.id;
+      li.classList.add("is-dragging");
+      e.dataTransfer.effectAllowed = "move";
+    });
+    li.addEventListener("dragend", () => {
+      li.classList.remove("is-dragging");
+      clearDragIndicators();
+    });
 
     return li;
   }
@@ -559,14 +554,59 @@
     document.querySelectorAll(".drag-over-top, .drag-over-bottom").forEach((el) => el.classList.remove("drag-over-top", "drag-over-bottom"));
   }
 
-  function reorder(sourceId, targetId, before) {
-    if (!sourceId || sourceId === targetId) return;
+  /* Column-level drag targets — set up once; they read live
+     state (dragId, sort mode) at drop time via closures. */
+  STATUSES.forEach((status) => {
+    const col = columns[status];
+
+    col.list.addEventListener("dragover", (e) => {
+      if (!dragId) return;
+      e.preventDefault();
+      col.root.classList.add("is-drag-over");
+      if (settings.sortBy === "manual") {
+        const hovered = e.target.closest(".kanban-card");
+        clearDragIndicators();
+        if (hovered && hovered.dataset.id !== dragId) {
+          const rect = hovered.getBoundingClientRect();
+          const before = e.clientY - rect.top < rect.height / 2;
+          hovered.classList.add(before ? "drag-over-top" : "drag-over-bottom");
+        }
+      }
+    });
+    col.list.addEventListener("dragleave", (e) => {
+      if (!col.root.contains(e.relatedTarget)) col.root.classList.remove("is-drag-over");
+    });
+    col.list.addEventListener("drop", (e) => {
+      e.preventDefault();
+      col.root.classList.remove("is-drag-over");
+      clearDragIndicators();
+      if (!dragId) return;
+      let targetId = null;
+      let before = true;
+      const hovered = e.target.closest(".kanban-card");
+      if (hovered && hovered.dataset.id !== dragId && settings.sortBy === "manual") {
+        targetId = hovered.dataset.id;
+        const rect = hovered.getBoundingClientRect();
+        before = e.clientY - rect.top < rect.height / 2;
+      }
+      moveCard(dragId, status, targetId, before);
+      dragId = null;
+    });
+  });
+
+  function moveCard(sourceId, targetStatus, targetId, before) {
+    const source = findTodo(sourceId);
+    if (!source) return;
+    setStatus(source, targetStatus);
     const sourceIdx = todos.findIndex((t) => t.id === sourceId);
-    if (sourceIdx === -1) return;
-    const [item] = todos.splice(sourceIdx, 1);
-    let targetIdx = todos.findIndex((t) => t.id === targetId);
-    if (targetIdx === -1) targetIdx = todos.length;
-    todos.splice(before ? targetIdx : targetIdx + 1, 0, item);
+    todos.splice(sourceIdx, 1);
+    if (targetId) {
+      let targetIdx = todos.findIndex((t) => t.id === targetId);
+      if (targetIdx === -1) targetIdx = todos.length;
+      todos.splice(before ? targetIdx : targetIdx + 1, 0, source);
+    } else {
+      todos.push(source);
+    }
     saveTodos(todos);
     render();
   }
@@ -574,31 +614,6 @@
   /* ---------------------------------------------------------
      Core mutations
      --------------------------------------------------------- */
-  function toggleComplete(id) {
-    const todo = findTodo(id);
-    if (!todo) return;
-    todo.completed = !todo.completed;
-    touch(todo);
-
-    if (todo.completed && todo.repeat !== "none" && todo.dueDate) {
-      const nextDue = computeNextDue(todo.dueDate, todo.repeat);
-      if (nextDue) {
-        const clone = {
-          ...todo,
-          id: uid(),
-          completed: false,
-          dueDate: nextDue,
-          comments: [],
-          subtasks: todo.subtasks.map((s) => ({ ...s, completed: false })),
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-        };
-        todos.unshift(clone);
-      }
-    }
-    saveTodos(todos);
-  }
-
   function toggleFavorite(id) {
     const todo = findTodo(id);
     if (!todo) return;
@@ -607,13 +622,26 @@
     saveTodos(todos);
   }
 
-  function clearCompleted() {
-    const removed = todos.filter((t) => t.completed);
-    if (removed.length === 0) return;
-    todos = todos.filter((t) => !t.completed);
+  function deleteWithUndo(id) {
+    const index = todos.findIndex((t) => t.id === id);
+    if (index === -1) return;
+    const [removed] = todos.splice(index, 1);
     saveTodos(todos);
     render();
-    showToast(`Cleared ${removed.length} completed task${removed.length === 1 ? "" : "s"}`, "Undo", () => {
+    showToast("Task deleted", "Undo", () => {
+      todos.splice(index, 0, removed);
+      saveTodos(todos);
+      render();
+    });
+  }
+
+  function clearDone() {
+    const removed = todos.filter((t) => t.status === "done");
+    if (removed.length === 0) return;
+    todos = todos.filter((t) => t.status !== "done");
+    saveTodos(todos);
+    render();
+    showToast(`Cleared ${removed.length} done task${removed.length === 1 ? "" : "s"}`, "Undo", () => {
       todos = [...removed, ...todos];
       saveTodos(todos);
       render();
@@ -621,7 +649,8 @@
   }
 
   /* ---------------------------------------------------------
-     Add-task form
+     Add-task forms — the header bar (always To do) and each
+     column's own quick composer (creates straight into that column).
      --------------------------------------------------------- */
   addForm.addEventListener("submit", (e) => {
     e.preventDefault();
@@ -635,6 +664,7 @@
 
     const todo = normalizeTodo({
       text,
+      status: "todo",
       priority: pendingPriority,
       dueDate: addDue.value || null,
       tags,
@@ -653,22 +683,26 @@
     addInput.focus();
   });
 
-  clearCompletedBtn.addEventListener("click", clearCompleted);
+  STATUSES.forEach((status) => {
+    const col = columns[status];
+    col.composerForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const text = col.composerInput.value.trim();
+      if (!text) return;
+      const todo = normalizeTodo({ text, status });
+      todos.unshift(todo);
+      saveTodos(todos);
+      render();
+      col.composerInput.value = "";
+      col.composerInput.focus();
+    });
+  });
+
+  clearDoneBtn.addEventListener("click", clearDone);
 
   searchInput.addEventListener("input", () => {
     query = searchInput.value;
     render();
-  });
-
-  filterButtons.forEach((btn) => {
-    btn.addEventListener("click", () => {
-      filter = btn.getAttribute("data-filter");
-      filterButtons.forEach((b) => {
-        b.classList.toggle("is-active", b === btn);
-        b.setAttribute("aria-selected", b === btn ? "true" : "false");
-      });
-      render();
-    });
   });
 
   document.addEventListener("keydown", (e) => {
@@ -691,14 +725,13 @@
     const position = ordered.findIndex((t) => t.id === todo.id) + 1;
     entryNumber.textContent = `No. ${String(position).padStart(3, "0")}`;
 
-    detailPageLeft.classList.toggle("is-done", todo.completed);
-    detailCheck.setAttribute("aria-label", todo.completed ? "Mark as not done" : "Mark as done");
-    detailCheck.innerHTML = '<svg width="12" height="10" viewBox="0 0 12 10" aria-hidden="true"><path d="M1 5l3.5 3.5L11 1.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    detailPageLeft.classList.toggle("is-done", todo.status === "done");
 
     if (document.activeElement !== detailTitle) detailTitle.value = todo.text;
     detailFavorite.classList.toggle("is-active", todo.favorite);
     detailFavorite.setAttribute("aria-label", todo.favorite ? "Remove from favorites" : "Add to favorites");
 
+    setActiveButton(statusRow, todo.status);
     setActiveButton(priorityRow, todo.priority);
     detailDue.value = todo.dueDate || "";
     detailRepeat.value = todo.repeat;
@@ -811,13 +844,6 @@
     });
   }
 
-  detailCheck.addEventListener("click", () => {
-    const todo = currentTodo();
-    if (!todo) return;
-    toggleComplete(todo.id);
-    renderDetail();
-  });
-
   detailTitle.addEventListener("blur", () => {
     const todo = currentTodo();
     if (!todo) return;
@@ -851,6 +877,16 @@
       todos.splice(index, 0, todo);
       saveTodos(todos);
       render();
+    });
+  });
+
+  statusRow.querySelectorAll(".option-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const todo = currentTodo();
+      if (!todo) return;
+      setStatus(todo, btn.getAttribute("data-value"));
+      saveTodos(todos);
+      renderDetail();
     });
   });
 
