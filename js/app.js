@@ -107,10 +107,11 @@
   const listView = document.getElementById("listView");
   const detailView = document.getElementById("detailView");
 
+  const composerZone = document.getElementById("composerZone");
+  const composerTrigger = document.getElementById("composerTrigger");
+  const composerCancel = document.getElementById("composerCancel");
   const addForm = document.getElementById("addForm");
   const addInput = document.getElementById("addInput");
-  const addOptionsToggle = document.getElementById("addOptionsToggle");
-  const addOptions = document.getElementById("addOptions");
   const addDue = document.getElementById("addDue");
   const addTags = document.getElementById("addTags");
 
@@ -368,21 +369,38 @@
   });
 
   /* ---------------------------------------------------------
-     Quick-add options (priority / due date / tags)
+     Composer — pops open full-width from the header, collapses
+     back to a slim trigger once a task is added or cancelled.
      --------------------------------------------------------- */
-  addOptionsToggle.addEventListener("click", () => {
-    const willShow = addOptions.hidden;
-    addOptions.hidden = !willShow;
-    addOptionsToggle.setAttribute("aria-expanded", String(willShow));
+  function expandComposer() {
+    composerTrigger.hidden = true;
+    addForm.hidden = false;
+    addInput.focus();
+  }
+
+  function collapseComposer() {
+    addForm.hidden = true;
+    composerTrigger.hidden = false;
+    addInput.value = "";
+    addDue.value = "";
+    addTags.value = "";
+    pendingPriority = "none";
+    setActiveButton(addForm.querySelector('[data-pending="priority"]'), pendingPriority);
+  }
+
+  composerTrigger.addEventListener("click", expandComposer);
+  composerCancel.addEventListener("click", collapseComposer);
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && !addForm.hidden) collapseComposer();
   });
 
-  addOptions.querySelectorAll('[data-pending="priority"] .option-btn').forEach((btn) => {
+  addForm.querySelectorAll('[data-pending="priority"] .option-btn').forEach((btn) => {
     btn.addEventListener("click", () => {
       pendingPriority = btn.getAttribute("data-value");
-      setActiveButton(addOptions.querySelector('[data-pending="priority"]'), pendingPriority);
+      setActiveButton(addForm.querySelector('[data-pending="priority"]'), pendingPriority);
     });
   });
-  setActiveButton(addOptions.querySelector('[data-pending="priority"]'), pendingPriority);
+  setActiveButton(addForm.querySelector('[data-pending="priority"]'), pendingPriority);
 
   /* ---------------------------------------------------------
      Filtering & sorting (status is a column now, not a filter)
@@ -672,15 +690,7 @@
     todos.unshift(todo);
     saveTodos(todos);
     render();
-
-    addInput.value = "";
-    addDue.value = "";
-    addTags.value = "";
-    pendingPriority = "none";
-    setActiveButton(addOptions.querySelector('[data-pending="priority"]'), pendingPriority);
-    addOptions.hidden = true;
-    addOptionsToggle.setAttribute("aria-expanded", "false");
-    addInput.focus();
+    collapseComposer();
   });
 
   STATUSES.forEach((status) => {

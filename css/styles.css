@@ -165,14 +165,13 @@ input { font-family: inherit; }
 .header-row.toolbar { padding-bottom: 14px; }
 .header-row-brand { justify-content: space-between; align-items: flex-start; padding-top: clamp(16px, 3vw, 28px); }
 
-#addOptions,
 #tagFilterBar {
   max-width: 1240px;
   margin: 0 auto;
   padding-left: clamp(16px, 3vw, 32px);
   padding-right: clamp(16px, 3vw, 32px);
+  padding-bottom: 14px;
 }
-#tagFilterBar { padding-bottom: 14px; }
 
 .brand {
   display: block;
@@ -216,25 +215,94 @@ input { font-family: inherit; }
 }
 .icon-btn:active { transform: scale(0.94); }
 
-/* Add row */
-.add-row {
+/* ---------------------------------------------------------
+   Composer — the add-task bar. Collapsed, it is a slim
+   full-width trigger; a click pops it into a full-width form
+   that grows the header, then collapses back on save so the
+   board reclaims the space.
+   --------------------------------------------------------- */
+.composer-zone {
+  width: 100%;
+  padding: 14px clamp(16px, 3vw, 32px);
+}
+
+.composer-trigger {
   display: flex;
-  gap: 10px;
-  margin-bottom: var(--gap);
-}
-.add-row input {
-  flex: 1;
-  padding: var(--pad) 14px;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 13px 16px;
+  border: 1px dashed var(--border-strong);
   border-radius: var(--radius);
-  border: 1px solid var(--border);
-  background: var(--surface);
-  color: var(--ink);
-  font-size: 1rem;
-  transition: border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
+  background: none;
+  color: var(--ink-muted);
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: border-color var(--dur) var(--ease), color var(--dur) var(--ease), background-color var(--dur) var(--ease);
 }
-.add-row input::placeholder { color: var(--ink-faint); }
-.add-row input:focus-visible {
+.composer-trigger:hover {
+  border-style: solid;
   border-color: var(--accent);
+  color: var(--ink);
+  background: var(--surface);
+}
+
+.composer-form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  animation: composerIn 180ms var(--ease);
+}
+@keyframes composerIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.composer-form input#addInput {
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface-raised);
+  color: var(--ink);
+  font-size: 1.15rem;
+  transition: border-color var(--dur) var(--ease);
+}
+.composer-form input#addInput::placeholder { color: var(--ink-faint); }
+.composer-form input#addInput:focus-visible { border-color: var(--accent); }
+
+.composer-options {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.composer-options .option-row-sm { flex-shrink: 0; }
+.option-row-sm .option-btn {
+  padding: 5px 11px;
+  font-size: 0.8rem;
+}
+.composer-options input[type="date"],
+.composer-options input[type="text"] {
+  padding: 7px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface-raised);
+  color: var(--ink);
+  font-size: 0.86rem;
+}
+.composer-options input[type="text"] { flex: 1; min-width: 160px; }
+
+.composer-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 14px;
 }
 
 .add-btn {
@@ -250,47 +318,6 @@ input { font-family: inherit; }
 }
 .add-btn:hover { background: var(--accent-strong); border-color: var(--accent-strong); }
 .add-btn:active { transform: scale(0.97); }
-
-#addOptionsToggle[aria-expanded="true"] {
-  color: var(--accent);
-  border-color: var(--accent);
-}
-
-/* Add-time options (collapsed by default to keep quick-add fast) */
-.add-options {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 14px;
-  margin-bottom: var(--gap);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--surface);
-}
-.add-options-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-.add-options-label {
-  font-size: 0.82rem;
-  color: var(--ink-muted);
-  min-width: 68px;
-}
-.option-row-sm .option-btn {
-  padding: 5px 11px;
-  font-size: 0.8rem;
-}
-.add-options input[type="date"],
-.add-options input[type="text"] {
-  padding: 6px 10px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border);
-  background: var(--surface-raised);
-  color: var(--ink);
-  font-size: 0.86rem;
-}
 
 /* Toolbar */
 .toolbar {
@@ -1116,7 +1143,8 @@ input { font-family: inherit; }
   .toolbar { flex-direction: column; align-items: stretch; }
   .search-wrap input, .search-wrap input:focus-visible { width: 100%; }
   .detail-grid { grid-template-columns: 1fr; }
-  .add-options-row { flex-direction: column; align-items: flex-start; gap: 6px; }
+  .composer-form input#addInput { font-size: 1rem; padding: 12px 14px; }
+  .composer-options input[type="text"] { min-width: 0; width: 100%; }
 }
 
 /* ---------------------------------------------------------

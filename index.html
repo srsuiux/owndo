@@ -21,35 +21,34 @@
         </button>
       </div>
 
-      <div class="header-row">
-        <form id="addForm" class="add-row" autocomplete="off">
-          <label for="addInput" class="sr-only">Add a task</label>
-          <input id="addInput" name="task" type="text" placeholder="Add a task…" maxlength="200" required />
-          <button type="button" id="addOptionsToggle" class="icon-btn" aria-label="More options" aria-expanded="false" aria-controls="addOptions">
-            <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><path d="M4 5h12M7 10h10M4 15h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="7" cy="5" r="1.6" fill="currentColor"/><circle cx="4" cy="10" r="1.6" fill="currentColor"/><circle cx="10" cy="15" r="1.6" fill="currentColor"/></svg>
-          </button>
-          <button type="submit" class="add-btn">Add</button>
-        </form>
-      </div>
+      <div class="composer-zone" id="composerZone">
+        <button type="button" id="composerTrigger" class="composer-trigger">
+          <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><line x1="10" y1="4" x2="10" y2="16" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><line x1="4" y1="10" x2="16" y2="10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+          Add a task…
+        </button>
 
-      <div id="addOptions" class="add-options" hidden>
-        <div class="add-options-row">
-          <span class="add-options-label">Priority</span>
-          <div class="option-row option-row-sm" data-pending="priority">
-            <button type="button" class="option-btn" data-value="none">None</button>
-            <button type="button" class="option-btn" data-value="low">Low</button>
-            <button type="button" class="option-btn" data-value="medium">Medium</button>
-            <button type="button" class="option-btn" data-value="high">High</button>
+        <form id="addForm" class="composer-form" autocomplete="off" hidden>
+          <label for="addInput" class="sr-only">Task title</label>
+          <input id="addInput" name="task" type="text" placeholder="What needs to be done?" maxlength="200" required />
+
+          <div class="composer-options">
+            <div class="option-row option-row-sm" data-pending="priority">
+              <button type="button" class="option-btn" data-value="none">None</button>
+              <button type="button" class="option-btn" data-value="low">Low</button>
+              <button type="button" class="option-btn" data-value="medium">Medium</button>
+              <button type="button" class="option-btn" data-value="high">High</button>
+            </div>
+            <label for="addDue" class="sr-only">Due date</label>
+            <input type="date" id="addDue" />
+            <label for="addTags" class="sr-only">Tags</label>
+            <input type="text" id="addTags" placeholder="Tags, comma separated" />
           </div>
-        </div>
-        <div class="add-options-row">
-          <label for="addDue" class="add-options-label">Due date</label>
-          <input type="date" id="addDue" />
-        </div>
-        <div class="add-options-row">
-          <label for="addTags" class="add-options-label">Tags</label>
-          <input type="text" id="addTags" placeholder="e.g. home, urgent" />
-        </div>
+
+          <div class="composer-actions">
+            <button type="button" id="composerCancel" class="text-btn">Cancel</button>
+            <button type="submit" class="add-btn">Add task</button>
+          </div>
+        </form>
       </div>
 
       <div class="header-row toolbar">
