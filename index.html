@@ -6,7 +6,7 @@
   <title>OwnDo — your local, private todo list</title>
   <meta name="description" content="OwnDo is a local-first todo app. No account, no server, no sync. Your tasks stay on your device." />
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="css/styles.css?v=9" />
+  <link rel="stylesheet" href="css/styles.css?v=10" />
 </head>
 <body>
   <div class="app">
@@ -66,10 +66,7 @@
             <button id="clearDoneBtn" class="column-clear" type="button">Clear</button>
           </div>
           <ul class="column-list" data-list="done"></ul>
-          <form class="column-composer" data-composer="done">
-            <label class="sr-only" for="composerDone">Add a card to Done</label>
-            <input id="composerDone" type="text" placeholder="+ Add a card" maxlength="200" />
-          </form>
+          <p class="column-composer column-composer-locked">Move a card here from In progress</p>
         </section>
       </div>
     </main>
@@ -214,7 +211,7 @@
             <div class="option-row" id="createStatusRow">
               <button type="button" class="option-btn" data-value="todo">To do</button>
               <button type="button" class="option-btn" data-value="doing">In progress</button>
-              <button type="button" class="option-btn" data-value="done">Done</button>
+              <button type="button" class="option-btn" data-value="done" disabled title="New tasks start at To do or In progress; move them to Done from there.">Done</button>
             </div>
           </section>
 
@@ -377,6 +374,6 @@
     <button id="toastAction" class="toast-action" type="button" hidden></button>
   </div>
 
-  <script src="js/app.js?v=9"></script>
+  <script src="js/app.js?v=10"></script>
 </body>
 </html>

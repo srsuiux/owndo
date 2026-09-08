@@ -403,6 +403,10 @@ input { font-family: inherit; }
   border-color: var(--accent);
   background: color-mix(in srgb, var(--accent) 6%, var(--surface));
 }
+.kanban-column.is-drag-invalid {
+  border-color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 6%, var(--surface));
+}
 
 .column-header {
   flex-shrink: 0;
@@ -481,6 +485,20 @@ input { font-family: inherit; }
   border-color: var(--accent);
   color: var(--ink);
   background: var(--surface-raised);
+}
+
+/* Done has no quick composer: a task can only reach Done by way
+   of In progress, so there is nothing valid to type here. */
+.column-composer-locked {
+  margin: 0;
+  height: var(--control-h-sm);
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--ink-faint);
+  font-size: 0.8rem;
 }
 
 /* Cards */
@@ -677,6 +695,11 @@ input { font-family: inherit; }
   border-color: var(--accent);
   color: var(--accent-ink);
 }
+.option-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.option-btn:disabled:hover { border-color: var(--border); }
 
 .swatch-row { display: flex; gap: 10px; }
 .swatch {

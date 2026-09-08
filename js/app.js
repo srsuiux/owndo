@@ -217,6 +217,15 @@
     });
   }
 
+  /* Disables status options a task cannot legally reach from its
+     current status (see canTransition) -- the Status row proves
+     the workflow rule instead of just enforcing it after a click. */
+  function applyStatusOptions(container, currentStatus) {
+    container.querySelectorAll("[data-value]").forEach((btn) => {
+      btn.disabled = !canTransition(currentStatus, btn.getAttribute("data-value"));
+    });
+  }
+
   function computeNextDue(dueDate, repeat) {
     const [y, m, d] = dueDate.split("-").map(Number);
     const date = new Date(y, m - 1, d);
@@ -239,9 +248,25 @@
     todo.updatedAt = Date.now();
   }
 
+  /* Workflow rule: a task can move backward to any earlier status
+     freely (reopening), or forward exactly one step at a time —
+     To do -> In progress -> Done. It cannot skip a step forward
+     (To do straight to Done), and it cannot be created as Done. */
+  function canTransition(fromStatus, toStatus) {
+    const from = STATUSES.indexOf(fromStatus);
+    const to = STATUSES.indexOf(toStatus);
+    if (to <= from) return true;
+    return to === from + 1;
+  }
+
   /* Sets a task's workflow status, spawning the next occurrence
-     of a repeating task the moment it lands in Done. */
+     of a repeating task the moment it lands in Done. Returns false
+     (and leaves the task untouched) if the transition skips a step. */
   function setStatus(todo, newStatus) {
+    if (!canTransition(todo.status, newStatus)) {
+      showToast('Move it to "In progress" first — Done can only be reached from there.');
+      return false;
+    }
     const wasDone = todo.status === "done";
     todo.status = newStatus;
     touch(todo);
@@ -261,6 +286,7 @@
         todos.unshift(clone);
       }
     }
+    return true;
   }
 
   /* ---------------------------------------------------------
@@ -691,6 +717,7 @@
     li.addEventListener("dragend", () => {
       li.classList.remove("is-dragging");
       clearDragIndicators();
+      STATUSES.forEach((s) => columns[s].root.classList.remove("is-drag-over", "is-drag-invalid"));
     });
 
     return li;
@@ -701,14 +728,25 @@
   }
 
   /* Column-level drag targets — set up once; they read live
-     state (dragId, sort mode) at drop time via closures. */
+     state (dragId, sort mode) at drop time via closures. A column
+     that the dragged card cannot legally reach (see canTransition)
+     never becomes a valid drop target: dragover skips preventDefault
+     so the browser shows its native "not allowed" cursor, and gets
+     a red outline of its own so the rule is visible, not just felt. */
   STATUSES.forEach((status) => {
     const col = columns[status];
 
     col.list.addEventListener("dragover", (e) => {
       if (!dragId) return;
+      const dragged = findTodo(dragId);
+      if (dragged && !canTransition(dragged.status, status)) {
+        col.root.classList.add("is-drag-invalid");
+        col.root.classList.remove("is-drag-over");
+        return;
+      }
       e.preventDefault();
       col.root.classList.add("is-drag-over");
+      col.root.classList.remove("is-drag-invalid");
       if (settings.sortBy === "manual") {
         const hovered = e.target.closest(".kanban-card");
         clearDragIndicators();
@@ -720,11 +758,11 @@
       }
     });
     col.list.addEventListener("dragleave", (e) => {
-      if (!col.root.contains(e.relatedTarget)) col.root.classList.remove("is-drag-over");
+      if (!col.root.contains(e.relatedTarget)) col.root.classList.remove("is-drag-over", "is-drag-invalid");
     });
     col.list.addEventListener("drop", (e) => {
       e.preventDefault();
-      col.root.classList.remove("is-drag-over");
+      col.root.classList.remove("is-drag-over", "is-drag-invalid");
       clearDragIndicators();
       if (!dragId) return;
       let targetId = null;
@@ -743,7 +781,7 @@
   function moveCard(sourceId, targetStatus, targetId, before) {
     const source = findTodo(sourceId);
     if (!source) return;
-    setStatus(source, targetStatus);
+    if (!setStatus(source, targetStatus)) return;
     const sourceIdx = todos.findIndex((t) => t.id === sourceId);
     todos.splice(sourceIdx, 1);
     if (targetId) {
@@ -800,6 +838,7 @@
      --------------------------------------------------------- */
   STATUSES.forEach((status) => {
     const col = columns[status];
+    if (!col.composerForm) return; // Done has no quick composer -- see canTransition
     col.composerForm.addEventListener("submit", (e) => {
       e.preventDefault();
       const text = col.composerInput.value.trim();
@@ -851,6 +890,7 @@
     detailFavorite.setAttribute("aria-label", todo.favorite ? "Remove from favorites" : "Add to favorites");
 
     setActiveButton(statusRow, todo.status);
+    applyStatusOptions(statusRow, todo.status);
     setActiveButton(priorityRow, todo.priority);
     detailDue.value = todo.dueDate || "";
     detailRepeat.value = todo.repeat;
@@ -1004,7 +1044,7 @@
     btn.addEventListener("click", () => {
       const todo = currentTodo();
       if (!todo) return;
-      setStatus(todo, btn.getAttribute("data-value"));
+      if (!setStatus(todo, btn.getAttribute("data-value"))) return;
       saveTodos(todos);
       renderDetail();
     });
