@@ -118,7 +118,14 @@
   const searchInput = document.getElementById("searchInput");
   const sortSelect = document.getElementById("sortSelect");
   const tagFilterBar = document.getElementById("tagFilterBar");
+  const noFiltersHint = document.getElementById("noFiltersHint");
   const clearDoneBtn = document.getElementById("clearDoneBtn");
+
+  const filterBtn = document.getElementById("filterBtn");
+  const filterActiveDot = document.getElementById("filterActiveDot");
+  const filterPanel = document.getElementById("filterPanel");
+  const closeFilterPanelBtn = document.getElementById("closeFilterPanel");
+  const resetFiltersBtn = document.getElementById("resetFiltersBtn");
 
   const settingsBtn = document.getElementById("settingsBtn");
   const closeSettings = document.getElementById("closeSettings");
@@ -192,6 +199,11 @@
 
   function formatDateTime(ms) {
     return new Date(ms).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+  }
+
+  function autoGrow(el) {
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
   }
 
   function setActiveButton(container, value) {
@@ -282,6 +294,7 @@
   }
 
   function renderRoute() {
+    if (!filterPanel.hidden) closeFilterPanel();
     const route = parseRoute();
     if (route.view === "detail" && findTodo(route.id)) {
       currentDetailId = route.id;
@@ -346,6 +359,7 @@
   let settingsTrigger = settingsBtn;
 
   function openSettings(trigger) {
+    closeFilterPanel();
     settingsTrigger = trigger || settingsBtn;
     settingsPanel.hidden = false;
     overlay.hidden = false;
@@ -369,29 +383,49 @@
   });
 
   /* ---------------------------------------------------------
-     Composer — pops open full-width from the header, collapses
-     back to a slim trigger once a task is added or cancelled.
+     Composer — the Add Task button pops the form open below the
+     header with sensible defaults pre-filled, and collapses it
+     again once a task is added or cancelled. Title is multi-line;
+     plain Enter inserts a line break, Cmd/Ctrl+Enter submits.
      --------------------------------------------------------- */
   function expandComposer() {
-    composerTrigger.hidden = true;
     addForm.hidden = false;
+    composerTrigger.setAttribute("aria-expanded", "true");
+
+    pendingPriority = "low";
+    setActiveButton(addForm.querySelector('[data-pending="priority"]'), pendingPriority);
+    addDue.value = todayStr();
+    addTags.value = "Todo";
+    addInput.value = "";
+    autoGrow(addInput);
     addInput.focus();
   }
 
   function collapseComposer() {
     addForm.hidden = true;
-    composerTrigger.hidden = false;
+    composerTrigger.setAttribute("aria-expanded", "false");
     addInput.value = "";
     addDue.value = "";
     addTags.value = "";
     pendingPriority = "none";
     setActiveButton(addForm.querySelector('[data-pending="priority"]'), pendingPriority);
+    autoGrow(addInput);
   }
 
-  composerTrigger.addEventListener("click", expandComposer);
+  composerTrigger.addEventListener("click", () => {
+    if (addForm.hidden) expandComposer(); else collapseComposer();
+  });
   composerCancel.addEventListener("click", collapseComposer);
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape" && !addForm.hidden) collapseComposer();
+  });
+
+  addInput.addEventListener("input", () => autoGrow(addInput));
+  addInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+      e.preventDefault();
+      addForm.requestSubmit();
+    }
   });
 
   addForm.querySelectorAll('[data-pending="priority"] .option-btn').forEach((btn) => {
@@ -401,6 +435,53 @@
     });
   });
   setActiveButton(addForm.querySelector('[data-pending="priority"]'), pendingPriority);
+
+  /* ---------------------------------------------------------
+     Filter & sort side panel — holds search, sort, and tag/
+     favorite filters so the main board stays uncluttered. It
+     floats over the board without dimming it, so changes are
+     visible immediately; only one side panel is open at a time.
+     --------------------------------------------------------- */
+  function openFilterPanel() {
+    if (!settingsPanel.hidden) closeSettingsPanel();
+    filterPanel.hidden = false;
+    filterBtn.setAttribute("aria-expanded", "true");
+  }
+
+  function closeFilterPanel() {
+    filterPanel.hidden = true;
+    filterBtn.setAttribute("aria-expanded", "false");
+  }
+
+  filterBtn.addEventListener("click", () => {
+    if (filterPanel.hidden) openFilterPanel(); else closeFilterPanel();
+  });
+  closeFilterPanelBtn.addEventListener("click", closeFilterPanel);
+  document.addEventListener("click", (e) => {
+    if (filterPanel.hidden) return;
+    // Use composedPath, not e.target: a click on something like a tag
+    // chip can re-render tagFilterBar's innerHTML synchronously in its
+    // own handler, detaching e.target from the document before this
+    // (bubbled) listener runs, which would make .contains() wrongly
+    // report "outside" and close the panel out from under the click.
+    const path = e.composedPath();
+    if (path.includes(filterPanel) || path.includes(filterBtn)) return;
+    closeFilterPanel();
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && !filterPanel.hidden) closeFilterPanel();
+  });
+
+  resetFiltersBtn.addEventListener("click", () => {
+    query = "";
+    searchInput.value = "";
+    tagFilter = null;
+    favoritesOnly = false;
+    settings.sortBy = "manual";
+    saveSettings(settings);
+    sortSelect.value = "manual";
+    render();
+  });
 
   /* ---------------------------------------------------------
      Filtering & sorting (status is a column now, not a filter)
@@ -470,6 +551,13 @@
 
     clearDoneBtn.disabled = todos.filter((t) => t.status === "done").length === 0;
     renderTagFilterBar();
+    updateFilterIndicators();
+  }
+
+  function updateFilterIndicators() {
+    const active = Boolean(query || tagFilter || favoritesOnly || settings.sortBy !== "manual");
+    filterActiveDot.hidden = !active;
+    resetFiltersBtn.disabled = !active;
   }
 
   function renderTagFilterBar() {
@@ -479,8 +567,10 @@
     if (allTags.length === 0 && !hasFavorites) {
       tagFilterBar.hidden = true;
       tagFilterBar.innerHTML = "";
+      noFiltersHint.hidden = false;
       return;
     }
+    noFiltersHint.hidden = true;
 
     tagFilterBar.hidden = false;
     let html = "";
@@ -718,6 +808,7 @@
   document.addEventListener("keydown", (e) => {
     if (!listView.hidden && e.key === "/" && document.activeElement !== searchInput && document.activeElement !== addInput) {
       e.preventDefault();
+      if (filterPanel.hidden) openFilterPanel();
       searchInput.focus();
     }
   });
@@ -737,7 +828,10 @@
 
     detailPageLeft.classList.toggle("is-done", todo.status === "done");
 
-    if (document.activeElement !== detailTitle) detailTitle.value = todo.text;
+    if (document.activeElement !== detailTitle) {
+      detailTitle.value = todo.text;
+      autoGrow(detailTitle);
+    }
     detailFavorite.classList.toggle("is-active", todo.favorite);
     detailFavorite.setAttribute("aria-label", todo.favorite ? "Remove from favorites" : "Add to favorites");
 
@@ -865,8 +959,9 @@
     }
     renderDetail();
   });
+  detailTitle.addEventListener("input", () => autoGrow(detailTitle));
   detailTitle.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") { e.preventDefault(); detailTitle.blur(); }
+    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); detailTitle.blur(); }
   });
 
   detailFavorite.addEventListener("click", () => {

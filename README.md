@@ -8,14 +8,14 @@ OwnDo is a small todo app with no account, no server, and no sync. It runs entir
 
 ## Features
 
-- A Kanban board — To do, In progress, Done — with a sticky header and a slim footer, so the board itself always fills the middle of the screen
+- A clean Kanban board — To do, In progress, Done — with only Add Task, Filter, and Settings on the main page; everything else lives in a side panel so the board stays front and center
+- A compact **Add Task** button pops a form open with sensible defaults already filled in: due today, Low priority, tagged "Todo" — edit or clear any of them before saving. Task titles support multiple lines
 - Drag a card between columns to change its status, or reorder within a column; each column has its own quick "+ Add a card" composer
+- **Filter & sort** panel (opens from the header, closes on outside click or Escape): search, sort, and tag/favorite filters, all synced live with the board without covering it
 - Create, edit, and delete tasks, each with a full-screen detail page split into a record (metadata) on the left and a scrollable log (comments) on the right
 - Set status, priority (none/low/medium/high), due dates, and repeat rules (daily/weekly/monthly)
 - Add notes, subtasks (a checklist within a task), tags, and comments to any task
-- Mark tasks as favorites, and filter the board by favorite or by tag
-- Sort each column by priority, due date, date added, or A–Z, or leave it on manual order for drag-and-drop
-- Search across titles, notes, and tags
+- Mark tasks as favorites
 - Clear an entire column of done tasks in one click, with an undo toast for accidental deletes
 - Export your tasks to a JSON file and import them back — your own backup, on your terms
 - Customize appearance: light/dark/system theme, accent color, density, corner style, and list font
