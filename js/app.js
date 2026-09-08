@@ -6,7 +6,7 @@
 
   const DEFAULT_SETTINGS = {
     theme: "system",
-    accent: "pine",
+    accent: "blue",
     density: "cozy",
     corners: "rounded",
     font: "sans",
