@@ -252,82 +252,6 @@ input { font-family: inherit; }
 .btn-primary:active { transform: scale(0.97); }
 .btn-primary[aria-expanded="true"] { background: var(--accent-strong); border-color: var(--accent-strong); }
 
-/* ---------------------------------------------------------
-   Composer — the add-task form. Collapsed, it takes no space
-   at all; the header Add Task button pops it open below the
-   brand row, then it collapses back on save.
-   --------------------------------------------------------- */
-.composer-zone {
-  width: 100%;
-  padding: 0 clamp(16px, 3vw, 32px);
-}
-
-.composer-form {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  margin: 0 0 14px;
-  padding: 18px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--surface);
-  animation: composerIn 180ms var(--ease);
-}
-@keyframes composerIn {
-  from { opacity: 0; transform: translateY(-6px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.composer-title {
-  width: 100%;
-  min-height: var(--control-h-lg);
-  padding: 11px 16px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border);
-  background: var(--surface-raised);
-  color: var(--ink);
-  font-family: inherit;
-  font-size: 1.05rem;
-  line-height: 1.4;
-  resize: none;
-  overflow: hidden;
-  transition: border-color var(--dur) var(--ease);
-}
-.composer-title::placeholder { color: var(--ink-faint); }
-.composer-title:focus-visible { border-color: var(--accent); }
-
-.composer-options {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  flex-wrap: wrap;
-}
-.composer-options .option-row-sm { flex-shrink: 0; }
-.option-row-sm .option-btn {
-  height: var(--control-h-sm);
-  padding: 0 11px;
-  font-size: 0.8rem;
-}
-.composer-options input[type="date"],
-.composer-options input[type="text"] {
-  height: var(--control-h);
-  padding: 0 var(--control-pad-x);
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border);
-  background: var(--surface-raised);
-  color: var(--ink);
-  font-size: 0.86rem;
-}
-.composer-options input[type="text"] { flex: 1; min-width: 160px; }
-
-.composer-actions {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 14px;
-}
-
 .add-btn {
   display: inline-flex;
   align-items: center;
@@ -465,9 +389,8 @@ input { font-family: inherit; }
 }
 
 .kanban-column {
-  flex: 1 1 300px;
+  flex: 1 1 0;
   min-width: 270px;
-  max-width: 380px;
   display: flex;
   flex-direction: column;
   background: var(--surface);
@@ -872,6 +795,15 @@ input { font-family: inherit; }
   overflow: hidden;
 }
 
+/* Create view — a single full-width page (no log pane; a task
+   has no comments to show until it exists). */
+.create-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  overflow: hidden;
+}
+
 .detail-page {
   flex: 1 1 50%;
   min-width: 0;
@@ -918,6 +850,7 @@ input { font-family: inherit; }
   resize: none;
   overflow: hidden;
 }
+.detail-title-input::placeholder { color: var(--ink-faint); font-weight: 400; }
 .detail-title-input:focus-visible { box-shadow: none; border-bottom: 1px solid var(--accent); }
 .detail-page-left.is-done .detail-title-input { color: var(--ink-muted); }
 
@@ -1150,8 +1083,6 @@ input { font-family: inherit; }
   .brand-mark { font-size: 1.3rem; }
   .btn-primary span { display: none; }
   .detail-grid { grid-template-columns: 1fr; }
-  .composer-title { font-size: 1rem; padding: 10px 14px; }
-  .composer-options input[type="text"] { min-width: 0; width: 100%; }
 }
 
 /* ---------------------------------------------------------

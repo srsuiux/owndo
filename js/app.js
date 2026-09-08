@@ -93,7 +93,8 @@
   let tagFilter = null;
   let favoritesOnly = false;
   let dragId = null;
-  let pendingPriority = "none";
+  let pendingPriority = "low";
+  let pendingStatus = "todo";
   let currentDetailId = null;
   let toastTimer = null;
 
@@ -106,14 +107,18 @@
   const appFooter = document.getElementById("appFooter");
   const listView = document.getElementById("listView");
   const detailView = document.getElementById("detailView");
+  const createView = document.getElementById("createView");
 
-  const composerZone = document.getElementById("composerZone");
   const composerTrigger = document.getElementById("composerTrigger");
-  const composerCancel = document.getElementById("composerCancel");
-  const addForm = document.getElementById("addForm");
-  const addInput = document.getElementById("addInput");
-  const addDue = document.getElementById("addDue");
-  const addTags = document.getElementById("addTags");
+  const createCancel = document.getElementById("createCancel");
+  const createSubmitBtn = document.getElementById("createSubmitBtn");
+  const createTitle = document.getElementById("createTitle");
+  const createStatusRow = document.getElementById("createStatusRow");
+  const createPriorityRow = document.getElementById("createPriorityRow");
+  const createDue = document.getElementById("createDue");
+  const createRepeat = document.getElementById("createRepeat");
+  const createTags = document.getElementById("createTags");
+  const createNotes = document.getElementById("createNotes");
 
   const searchInput = document.getElementById("searchInput");
   const sortSelect = document.getElementById("sortSelect");
@@ -282,9 +287,11 @@
   }
 
   /* ---------------------------------------------------------
-     Routing — #/ for the board, #/todo/<id> for the detail page
+     Routing — #/ for the board, #/todo/<id> for the detail page,
+     #/new for the full-screen Add Task form
      --------------------------------------------------------- */
   function parseRoute() {
+    if (location.hash === "#/new") return { view: "create" };
     const match = location.hash.match(/^#\/todo\/(.+)$/);
     return match ? { view: "detail", id: decodeURIComponent(match[1]) } : { view: "list" };
   }
@@ -301,11 +308,22 @@
       appHeader.hidden = true;
       appFooter.hidden = true;
       listView.hidden = true;
+      createView.hidden = true;
       detailView.hidden = false;
       renderDetail();
+    } else if (route.view === "create") {
+      currentDetailId = null;
+      detailView.hidden = true;
+      appHeader.hidden = true;
+      appFooter.hidden = true;
+      listView.hidden = true;
+      createView.hidden = false;
+      document.title = "New task — OwnDo";
+      resetCreateForm();
     } else {
       currentDetailId = null;
       detailView.hidden = true;
+      createView.hidden = true;
       appHeader.hidden = false;
       appFooter.hidden = false;
       listView.hidden = false;
@@ -383,58 +401,78 @@
   });
 
   /* ---------------------------------------------------------
-     Composer — the Add Task button pops the form open below the
-     header with sensible defaults pre-filled, and collapses it
-     again once a task is added or cancelled. Title is multi-line;
-     plain Enter inserts a line break, Cmd/Ctrl+Enter submits.
+     Create view — Add Task opens a full-screen form (the board
+     is hidden underneath, same as the detail page) with sensible
+     defaults pre-filled: To do, Low priority, due today, tagged
+     Todo. Title is multi-line; plain Enter inserts a line break,
+     Cmd/Ctrl+Enter submits.
      --------------------------------------------------------- */
-  function expandComposer() {
-    addForm.hidden = false;
-    composerTrigger.setAttribute("aria-expanded", "true");
-
+  function resetCreateForm() {
+    pendingStatus = "todo";
+    setActiveButton(createStatusRow, pendingStatus);
     pendingPriority = "low";
-    setActiveButton(addForm.querySelector('[data-pending="priority"]'), pendingPriority);
-    addDue.value = todayStr();
-    addTags.value = "Todo";
-    addInput.value = "";
-    autoGrow(addInput);
-    addInput.focus();
+    setActiveButton(createPriorityRow, pendingPriority);
+    createDue.value = todayStr();
+    createRepeat.value = "none";
+    createTags.value = "Todo";
+    createNotes.value = "";
+    createTitle.value = "";
+    autoGrow(createTitle);
+    createTitle.focus();
   }
 
-  function collapseComposer() {
-    addForm.hidden = true;
-    composerTrigger.setAttribute("aria-expanded", "false");
-    addInput.value = "";
-    addDue.value = "";
-    addTags.value = "";
-    pendingPriority = "none";
-    setActiveButton(addForm.querySelector('[data-pending="priority"]'), pendingPriority);
-    autoGrow(addInput);
+  function submitCreate() {
+    const text = createTitle.value.trim();
+    if (!text) {
+      createTitle.focus();
+      return;
+    }
+    const tags = createTags.value
+      .split(",")
+      .map((t) => t.trim())
+      .filter(Boolean);
+
+    const todo = normalizeTodo({
+      text,
+      status: pendingStatus,
+      priority: pendingPriority,
+      dueDate: createDue.value || null,
+      repeat: createRepeat.value,
+      tags,
+      notes: createNotes.value,
+    });
+    todos.unshift(todo);
+    saveTodos(todos);
+    goTo("#/");
   }
 
-  composerTrigger.addEventListener("click", () => {
-    if (addForm.hidden) expandComposer(); else collapseComposer();
-  });
-  composerCancel.addEventListener("click", collapseComposer);
+  composerTrigger.addEventListener("click", () => goTo("#/new"));
+  createCancel.addEventListener("click", () => goTo("#/"));
+  createSubmitBtn.addEventListener("click", submitCreate);
   document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && !addForm.hidden) collapseComposer();
+    if (e.key === "Escape" && !createView.hidden) goTo("#/");
   });
 
-  addInput.addEventListener("input", () => autoGrow(addInput));
-  addInput.addEventListener("keydown", (e) => {
+  createTitle.addEventListener("input", () => autoGrow(createTitle));
+  createTitle.addEventListener("keydown", (e) => {
     if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
       e.preventDefault();
-      addForm.requestSubmit();
+      submitCreate();
     }
   });
 
-  addForm.querySelectorAll('[data-pending="priority"] .option-btn').forEach((btn) => {
+  createStatusRow.querySelectorAll(".option-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
-      pendingPriority = btn.getAttribute("data-value");
-      setActiveButton(addForm.querySelector('[data-pending="priority"]'), pendingPriority);
+      pendingStatus = btn.getAttribute("data-value");
+      setActiveButton(createStatusRow, pendingStatus);
     });
   });
-  setActiveButton(addForm.querySelector('[data-pending="priority"]'), pendingPriority);
+  createPriorityRow.querySelectorAll(".option-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      pendingPriority = btn.getAttribute("data-value");
+      setActiveButton(createPriorityRow, pendingPriority);
+    });
+  });
 
   /* ---------------------------------------------------------
      Filter & sort side panel — holds search, sort, and tag/
@@ -760,29 +798,6 @@
      Add-task forms — the header bar (always To do) and each
      column's own quick composer (creates straight into that column).
      --------------------------------------------------------- */
-  addForm.addEventListener("submit", (e) => {
-    e.preventDefault();
-    const text = addInput.value.trim();
-    if (!text) return;
-
-    const tags = addTags.value
-      .split(",")
-      .map((t) => t.trim())
-      .filter(Boolean);
-
-    const todo = normalizeTodo({
-      text,
-      status: "todo",
-      priority: pendingPriority,
-      dueDate: addDue.value || null,
-      tags,
-    });
-    todos.unshift(todo);
-    saveTodos(todos);
-    render();
-    collapseComposer();
-  });
-
   STATUSES.forEach((status) => {
     const col = columns[status];
     col.composerForm.addEventListener("submit", (e) => {
@@ -806,7 +821,7 @@
   });
 
   document.addEventListener("keydown", (e) => {
-    if (!listView.hidden && e.key === "/" && document.activeElement !== searchInput && document.activeElement !== addInput) {
+    if (!listView.hidden && e.key === "/" && document.activeElement !== searchInput) {
       e.preventDefault();
       if (filterPanel.hidden) openFilterPanel();
       searchInput.focus();
